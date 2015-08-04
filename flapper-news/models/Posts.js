@@ -1,5 +1,7 @@
 var mongoose = require('mongoose'); // mongoose object
 
+// ObjectId: used to create relationships between data models
+// ref: what type of object the ID references
 var PostSchema = new mongoose.Schema({
   title: String,
   link: String,
@@ -8,13 +10,8 @@ var PostSchema = new mongoose.Schema({
 });
 mongoose.model('Post', PostSchema); // Post model
 
-// ObjectId: used to create relationships between data models
-// ref: what type of object the ID references
-
-var CommentSchema = new mongoose.Schema({
-  body: String,
-  author: String,
-  upvotes: {type: Number, default: 0},
-  post: {type: mongoose.Schema.Types.ObjectId, ref: 'Post'}
-});
-mongoose.model('Comment', CommentSchema); // Comment model
+// adds an upvote method to the Posts schema
+PostSchema.methods.upvote = function(cb) {
+  this.upvotes += 1;
+  this.save(cb);
+};
