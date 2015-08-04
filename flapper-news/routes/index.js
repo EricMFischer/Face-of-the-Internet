@@ -20,7 +20,8 @@ POST /posts/:id/comments - add a new comment to a post by ID
 PUT /posts/:id/comments/:id/upvote - upvote a comment
 */
 
-// Define the URL for the route /posts. GET.
+// Define the URL for the route /posts
+// GET.
 router.get('/posts', function(req, res, next) {
   Post.find(function(err, posts) {
     if (err) {return next(err);}
@@ -37,6 +38,8 @@ router.post('/posts', function(req, res, next) {
   });
 });
 
+
+
 // when we define a route URL with :post in it, this will be run first
 router.param('post', function(req, res, next, id) {
   var query = Post.findById(id); // retrieves post obj from db
@@ -50,7 +53,59 @@ router.param('post', function(req, res, next, id) {
 });
 
 router.get('/posts/:post', function(req, res) {
-  res.json(req.post); // post was already attached to req object, so our request handler just has to return the JSON back to the client
+  req.post.populate('comments', function(err, post) {
+    if (err) {return next(err);} // loads comments associated with particular post
+  res.json(req.post); // post was already attached to req object, so our request handler simply has to return the JSON back to the client
 });
+
+// creates route for upvoting method in Post schema
+router.put('/posts/:post/upvote', function(req, res, next) {
+  req.post.upvote(function(err, post) {
+    if (err) {return next(err);}
+    res.json(post);
+  });
+});
+
+
+// ------------- COMMENTS ------------------ //
+
+// Creates comments route for a particular post
+// Need to include post ID, which is already included in request
+router.post('/posts/:post/comments', function(req, res, next) {
+  var comment = new Comment(req.body);
+  comment.post = req.post;
+
+  comment.save(function(err, comment){
+    if(err){ return next(err); }
+
+    req.post.comments.push(comment);
+    req.post.save(function(err, post) {
+      if(err){ return next(err); }
+
+      res.json(comment);
+    });
+  });
+});
+
+// when we define a route URL with :comment in it, this will be run first
+router.param('comment', function(req, res, next, id) {
+  var query = Comment.findById(id); // retrieves comment obj from db
+  query.exec(function(err, comment) {
+    if (err) {return next(err);}
+    if (!post) {return next(new Error('Cannot find comment'));}
+
+    req.comment = comment; // attaches comment obj to the req obj
+    return next(); // routeHandler is called
+  });
+});
+
+// creates route for upvoting method in Comment schema
+router.put('/posts/:post/comments/:comment/upvote', function(req, res, next) {
+  req.comment.upvote(function(err, comment) {
+    if (err) {return next(err);}
+    res.json(comment);
+  });
+});
+
 
 module.exports = router;
